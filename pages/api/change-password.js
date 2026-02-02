@@ -24,8 +24,8 @@ export default async function handler(req, res) {
     })
 
     if (error) {
-      console.error('Supabase RPC error:', error)
-      return res.status(500).json({ success: false, error: 'Server error' })
+      console.error('Supabase RPC error:', error.message)
+      return res.status(500).json({ success: false, error: error.message })
     }
 
     return res.status(200).json(data)
