@@ -143,7 +143,7 @@ export default function AdminPage() {
       const result = await res.json()
 
       if (!res.ok || !result.success) {
-        throw new Error(result.error || 'Failed to change password')
+        throw new Error('Server error')
       }
 
       show(result.message || 'Password changed successfully!')
@@ -152,7 +152,7 @@ export default function AdminPage() {
       setConfirmNewPassword('')
     } catch (err) {
       console.error('Password change error:', err)
-      show(err.message || 'Error changing password', true)
+      show('Server error', true)
     } finally {
       setPwLoading(false)
     }
