@@ -1,7 +1,5 @@
 // pages/api/change-password.js
-
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
+import { createClient } from '@supabase/supabase-js'
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -9,23 +7,23 @@ export default async function handler(req, res) {
   }
 
   try {
-    const cookieStore = cookies()
-
-    const supabase = createServerClient(
+    const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY, // ← this is the key secret!
-      {
-        cookies: {
-          get: (name) => cookieStore.get(name)?.value,
-          set: (name, value, options) => cookieStore.set({ name, value, ...options }),
-          remove: (name, options) => cookieStore.delete({ name, ...options }),
-        },
-      }
+      process.env.SUPABASE_SERVICE_ROLE_KEY
     )
 
-    // Make sure user is logged in (optional but good)
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
+    // Get cookies manually from request headers
+    const cookies = req.cookies || {}
+
+    // Optional: refresh session if needed (not strictly required for this RPC)
+    const accessToken = cookies['sb-access-token'] || cookies['sb-auth-token']
+    if (accessToken) {
+      await supabase.auth.setSession({ access_token: accessToken })
+    }
+
+    // Verify user is authenticated
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) {
       return res.status(401).json({ success: false, error: 'Not authenticated' })
     }
 
@@ -35,7 +33,6 @@ export default async function handler(req, res) {
       return res.status(400).json({ success: false, error: 'Invalid input' })
     }
 
-    // Call your existing RPC function
     const { data, error } = await supabase.rpc('change_password_secure', {
       current_plain_password,
       new_plain_password,
