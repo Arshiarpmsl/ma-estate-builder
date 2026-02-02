@@ -20,7 +20,7 @@ export default async function handler(req, res) {
 
     const { data, error } = await supabase.rpc('change_password_secure', {
       current_plain_password,
-      new_plain_password,
+      new_plain_password
     })
 
     if (error) {
