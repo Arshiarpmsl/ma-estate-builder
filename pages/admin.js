@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { db } from '@/lib/supabase'
 import Stars from '@/components/Stars'
-import { Settings, Building2, Hammer, Image, MessageSquare, User, Eye, EyeOff, LogOut, Save, Plus, Trash2, X, Loader2, Mail, Home, Edit2, RefreshCw } from 'lucide-react'
+import { Settings, Building2, Hammer, Image, MessageSquare, User, Eye, EyeOff, LogOut, Save, Plus, Trash2, X, Loader2, Mail, Home, Edit2, RefreshCw, Lock } from 'lucide-react'
 
 export default function AdminPage() {
   const [auth, setAuth] = useState(false)
@@ -43,6 +43,14 @@ export default function AdminPage() {
   const [replyingTo, setReplyingTo] = useState(null)
   const [replySubject, setReplySubject] = useState('')
   const [replyMessage, setReplyMessage] = useState('')
+
+  // ── Added for password change ──
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmNewPassword, setConfirmNewPassword] = useState('')
+  const [showCurrentPw, setShowCurrentPw] = useState(false)
+  const [showNewPw, setShowNewPw] = useState(false)
+  const [pwLoading, setPwLoading] = useState(false)
 
   useEffect(() => {
     if (sessionStorage.getItem('ma_admin') === 'true') { setAuth(true); loadAll() }
@@ -109,6 +117,42 @@ export default function AdminPage() {
     i.click()
   }
 
+  // ── Added: Password change handler ──
+  const handleChangePassword = async () => {
+    if (newPassword !== confirmNewPassword) {
+      show('New passwords do not match', true)
+      return
+    }
+    if (newPassword.length < 6) {
+      show('New password must be at least 6 characters', true)
+      return
+    }
+
+    setPwLoading(true)
+    try {
+      const { data, error } = await db.supabase.rpc('change_password_secure', {
+        current_plain_password: currentPassword,
+        new_plain_password: newPassword
+      })
+
+      if (error) throw error
+
+      if (data?.success) {
+        show(data.message || 'Password changed successfully!')
+        setCurrentPassword('')
+        setNewPassword('')
+        setConfirmNewPassword('')
+      } else {
+        show(data?.error || 'Failed to change password', true)
+      }
+    } catch (err) {
+      console.error(err)
+      show('Error changing password – check console', true)
+    } finally {
+      setPwLoading(false)
+    }
+  }
+
   if (!auth) return (
     <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl p-8 shadow-xl w-full max-w-md">
@@ -150,6 +194,7 @@ export default function AdminPage() {
           <Tab id="beforeafter" icon={RefreshCw} label="Before & After"/>
           <Tab id="reviews" icon={MessageSquare} label="Reviews"/>
           <Tab id="messages" icon={Mail} label="Messages"/>
+          <Tab id="security" icon={Lock} label="Security"/>
         </div>
 
         {/* HOMEPAGE TAB */}
@@ -588,6 +633,96 @@ export default function AdminPage() {
             </div>
           )}
         </div>}
+
+        {/* ── Added: Security / Change Password Tab ── */}
+        {tab === 'security' && (
+          <div className="bg-white rounded-2xl p-6 shadow-lg max-w-lg mx-auto">
+            <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
+              <Lock className="w-6 h-6 text-amber-600" />
+              Change Password
+            </h2>
+            <p className="text-slate-600 mb-6">
+              You must enter your current password to verify your identity.
+            </p>
+
+            <div className="space-y-5">
+              <div className="relative">
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Current Password
+                </label>
+                <input
+                  type={showCurrentPw ? 'text' : 'password'}
+                  value={currentPassword}
+                  onChange={e => setCurrentPassword(e.target.value)}
+                  className="w-full px-4 py-3 border rounded-xl pr-12"
+                  placeholder="••••••••"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowCurrentPw(!showCurrentPw)}
+                  className="absolute right-3 top-[42px] text-slate-400"
+                >
+                  {showCurrentPw ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
+
+              <div className="relative">
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  New Password
+                </label>
+                <input
+                  type={showNewPw ? 'text' : 'password'}
+                  value={newPassword}
+                  onChange={e => setNewPassword(e.target.value)}
+                  className="w-full px-4 py-3 border rounded-xl pr-12"
+                  placeholder="Minimum 6 characters"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowNewPw(!showNewPw)}
+                  className="absolute right-3 top-[42px] text-slate-400"
+                >
+                  {showNewPw ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Confirm New Password
+                </label>
+                <input
+                  type="password"
+                  value={confirmNewPassword}
+                  onChange={e => setConfirmNewPassword(e.target.value)}
+                  className="w-full px-4 py-3 border rounded-xl"
+                  placeholder="Confirm new password"
+                />
+              </div>
+
+              <button
+                onClick={handleChangePassword}
+                disabled={pwLoading}
+                className={`w-full py-3 px-6 rounded-xl text-white font-semibold flex items-center justify-center gap-2 transition ${
+                  pwLoading
+                    ? 'bg-green-400 cursor-not-allowed'
+                    : 'bg-green-600 hover:bg-green-700'
+                }`}
+              >
+                {pwLoading ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Changing...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-5 h-5" />
+                    Update Password
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {msg && <div className={`fixed bottom-4 right-4 px-4 py-2 rounded-lg shadow-lg ${msg.err?'bg-red-500':'bg-green-500'} text-white`}>{msg.m}</div>}
