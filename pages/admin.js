@@ -117,7 +117,7 @@ export default function AdminPage() {
     i.click()
   }
 
-  // ── FIXED: Password change handler (now uses secure server API route) ──
+  // ── FIXED: Password change handler – calls server API route ──
   const handleChangePassword = async () => {
     if (newPassword !== confirmNewPassword) {
       show('New passwords do not match', true)
@@ -143,7 +143,7 @@ export default function AdminPage() {
       const result = await res.json()
 
       if (!res.ok || !result.success) {
-        throw new Error('Server error')
+        throw new Error(result.error || 'Server error')
       }
 
       show(result.message || 'Password changed successfully!')
