@@ -5,11 +5,13 @@ export default function ImageCarousel({ images, height = "h-48", autoPlay = fals
   const [current, setCurrent] = useState(0)
   const [hovered, setHovered] = useState(false)
   const touchStartX = useRef(null)
+  const touchStartY = useRef(null)
   const touchEndX = useRef(null)
+  const touchEndY = useRef(null)
   const touchStartTime = useRef(null)
 
-  const SWIPE_THRESHOLD = 50
-  const MAX_TAP_TIME = 300
+  const SWIPE_THRESHOLD = 60
+  const MAX_TAP_TIME = 220
 
   useEffect(() => {
     if (autoPlay && !hovered && images?.length > 1) {
@@ -20,39 +22,48 @@ export default function ImageCarousel({ images, height = "h-48", autoPlay = fals
 
   const handleTouchStart = (e) => {
     touchStartX.current = e.touches[0].clientX
+    touchStartY.current = e.touches[0].clientY
     touchStartTime.current = Date.now()
     touchEndX.current = null
+    touchEndY.current = null
   }
 
   const handleTouchMove = (e) => {
     touchEndX.current = e.touches[0].clientX
+    touchEndY.current = e.touches[0].clientY
   }
 
   const handleTouchEnd = (e) => {
-    if (!touchStartX.current || !touchEndX.current) return
+    if (!touchStartX.current || !touchEndX.current || !touchStartY.current || !touchEndY.current) return
 
-    const distance = touchStartX.current - touchEndX.current
+    const deltaX = touchStartX.current - touchEndX.current
+    const deltaY = touchStartY.current - touchEndY.current
+
+    const absDeltaX = Math.abs(deltaX)
+    const absDeltaY = Math.abs(deltaY)
+
     const time = Date.now() - touchStartTime.current
-    const isSwipe = Math.abs(distance) > SWIPE_THRESHOLD
 
-    if (isSwipe) {
-      if (distance > 0) {
+    const isMostlyHorizontal = absDeltaX > absDeltaY * 1.8
+
+    if (absDeltaX > SWIPE_THRESHOLD && isMostlyHorizontal) {
+      if (deltaX > 0) {
         setCurrent(c => (c + 1) % images.length) // Swipe left → next
       } else {
         setCurrent(c => (c - 1 + images.length) % images.length) // Swipe right → prev
       }
-    } else {
-      // Not a swipe → treat as tap: open lightbox
-      onImageClick && onImageClick(images, current)
+    } else if (time < MAX_TAP_TIME && absDeltaX < 30 && absDeltaY < 30) {
+      onImageClick?.(images, current)
     }
 
     touchStartX.current = null
+    touchStartY.current = null
     touchEndX.current = null
+    touchEndY.current = null
     touchStartTime.current = null
   }
 
   const handleClick = () => {
-    // Desktop click → open lightbox on current image
     onImageClick && onImageClick(images, current)
   }
 
@@ -68,13 +79,13 @@ export default function ImageCarousel({ images, height = "h-48", autoPlay = fals
 
   return (
     <div
-      className={`relative ${height} group cursor-pointer`}
+      className={`relative ${height} group cursor-pointer touch-pan-y`}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
-      onClick={handleClick} // Desktop click opens lightbox
+      onClick={handleClick}
     >
       <div className="absolute inset-0 overflow-hidden">
         {images.map((img, i) => (
@@ -87,12 +98,10 @@ export default function ImageCarousel({ images, height = "h-48", autoPlay = fals
         ))}
       </div>
 
-      {/* Zoom icon overlay – shows on hover (desktop) or always faint on mobile */}
       <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity bg-black/20 pointer-events-none">
         <ZoomIn className="w-12 h-12 text-white"/>
       </div>
 
-      {/* Arrows – always visible on mobile, hover on desktop, larger for touch */}
       <button
         onClick={e => { e.stopPropagation(); setCurrent(c => (c - 1 + images.length) % images.length) }}
         className="absolute left-3 top-1/2 -translate-y-1/2 w-12 h-12 bg-black/70 hover:bg-black/90 text-white rounded-full flex items-center justify-center z-20 opacity-90 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
@@ -106,7 +115,6 @@ export default function ImageCarousel({ images, height = "h-48", autoPlay = fals
         <ChevronRight className="w-7 h-7"/>
       </button>
 
-      {/* Dots */}
       <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2 z-20">
         {images.map((_, i) => (
           <button
@@ -117,7 +125,6 @@ export default function ImageCarousel({ images, height = "h-48", autoPlay = fals
         ))}
       </div>
 
-      {/* Counter */}
       <div className="absolute top-3 right-3 bg-black/70 text-white text-sm px-3 py-1.5 rounded-full z-20">
         {current + 1}/{images.length}
       </div>
