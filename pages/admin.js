@@ -117,7 +117,7 @@ export default function AdminPage() {
     i.click()
   }
 
-  // ── FIXED: Password change handler – calls server API route ──
+  // ── FIXED: Password change handler – calls server API route & shows real error ──
   const handleChangePassword = async () => {
     if (newPassword !== confirmNewPassword) {
       show('New passwords do not match', true)
@@ -140,10 +140,14 @@ export default function AdminPage() {
         })
       })
 
+      if (!res.ok) {
+        throw new Error('Network error – check connection')
+      }
+
       const result = await res.json()
 
-      if (!res.ok || !result.success) {
-        throw new Error(result.error || 'Server error')
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to change password')
       }
 
       show(result.message || 'Password changed successfully!')
@@ -152,7 +156,7 @@ export default function AdminPage() {
       setConfirmNewPassword('')
     } catch (err) {
       console.error('Password change error:', err)
-      show('Server error', true)
+      show(err.message || 'Server error', true)
     } finally {
       setPwLoading(false)
     }
