@@ -118,40 +118,44 @@ export default function AdminPage() {
   }
 
   // ── Added: Password change handler ──
-  const handleChangePassword = async () => {
-    if (newPassword !== confirmNewPassword) {
-      show('New passwords do not match', true)
-      return
-    }
-    if (newPassword.length < 6) {
-      show('New password must be at least 6 characters', true)
-      return
-    }
+const handleChangePassword = async () => {
+  if (newPassword !== confirmNewPassword) {
+    show('New passwords do not match', true)
+    return
+  }
+  if (newPassword.length < 6) {
+    show('New password must be at least 6 characters', true)
+    return
+  }
 
-    setPwLoading(true)
-    try {
-      const { data, error } = await db.supabase.rpc('change_password_secure', {
+  setPwLoading(true)
+  try {
+    const res = await fetch('/api/change-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
         current_plain_password: currentPassword,
         new_plain_password: newPassword
       })
+    })
 
-      if (error) throw error
+    const result = await res.json()
 
-      if (data?.success) {
-        show(data.message || 'Password changed successfully!')
-        setCurrentPassword('')
-        setNewPassword('')
-        setConfirmNewPassword('')
-      } else {
-        show(data?.error || 'Failed to change password', true)
-      }
-    } catch (err) {
-      console.error(err)
-      show('Error changing password – check console', true)
-    } finally {
-      setPwLoading(false)
+    if (!res.ok || !result.success) {
+      throw new Error(result.error || 'Failed to change password')
     }
+
+    show(result.message || 'Password changed successfully!')
+    setCurrentPassword('')
+    setNewPassword('')
+    setConfirmNewPassword('')
+  } catch (err) {
+    console.error('Password change error:', err)
+    show(err.message || 'Error changing password – check console', true)
+  } finally {
+    setPwLoading(false)
   }
+}
 
   if (!auth) return (
     <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
