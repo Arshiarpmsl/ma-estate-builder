@@ -117,45 +117,46 @@ export default function AdminPage() {
     i.click()
   }
 
-  // ── Added: Password change handler ──
-const handleChangePassword = async () => {
-  if (newPassword !== confirmNewPassword) {
-    show('New passwords do not match', true)
-    return
-  }
-  if (newPassword.length < 6) {
-    show('New password must be at least 6 characters', true)
-    return
-  }
-
-  setPwLoading(true)
-  try {
-    const res = await fetch('/api/change-password', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        current_plain_password: currentPassword,
-        new_plain_password: newPassword
-      })
-    })
-
-    const result = await res.json()
-
-    if (!res.ok || !result.success) {
-      throw new Error(result.error || 'Failed to change password')
+  // ── FIXED: Password change handler (now uses secure server API route) ──
+  const handleChangePassword = async () => {
+    if (newPassword !== confirmNewPassword) {
+      show('New passwords do not match', true)
+      return
+    }
+    if (newPassword.length < 6) {
+      show('New password must be at least 6 characters', true)
+      return
     }
 
-    show(result.message || 'Password changed successfully!')
-    setCurrentPassword('')
-    setNewPassword('')
-    setConfirmNewPassword('')
-  } catch (err) {
-    console.error('Password change error:', err)
-    show(err.message || 'Error changing password – check console', true)
-  } finally {
-    setPwLoading(false)
+    setPwLoading(true)
+
+    try {
+      const res = await fetch('/api/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          current_plain_password: currentPassword,
+          new_plain_password: newPassword
+        })
+      })
+
+      const result = await res.json()
+
+      if (!res.ok || !result.success) {
+        throw new Error(result.error || 'Failed to change password')
+      }
+
+      show(result.message || 'Password changed successfully!')
+      setCurrentPassword('')
+      setNewPassword('')
+      setConfirmNewPassword('')
+    } catch (err) {
+      console.error('Password change error:', err)
+      show(err.message || 'Error changing password', true)
+    } finally {
+      setPwLoading(false)
+    }
   }
-}
 
   if (!auth) return (
     <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
@@ -638,7 +639,7 @@ const handleChangePassword = async () => {
           )}
         </div>}
 
-        {/* ── Added: Security / Change Password Tab ── */}
+        {/* Security / Change Password Tab */}
         {tab === 'security' && (
           <div className="bg-white rounded-2xl p-6 shadow-lg max-w-lg mx-auto">
             <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
@@ -651,9 +652,7 @@ const handleChangePassword = async () => {
 
             <div className="space-y-5">
               <div className="relative">
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Current Password
-                </label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Current Password</label>
                 <input
                   type={showCurrentPw ? 'text' : 'password'}
                   value={currentPassword}
@@ -671,9 +670,7 @@ const handleChangePassword = async () => {
               </div>
 
               <div className="relative">
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  New Password
-                </label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">New Password</label>
                 <input
                   type={showNewPw ? 'text' : 'password'}
                   value={newPassword}
@@ -691,9 +688,7 @@ const handleChangePassword = async () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Confirm New Password
-                </label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Confirm New Password</label>
                 <input
                   type="password"
                   value={confirmNewPassword}
