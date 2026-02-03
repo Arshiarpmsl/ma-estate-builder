@@ -44,7 +44,7 @@ export default function AdminPage() {
   const [replySubject, setReplySubject] = useState('')
   const [replyMessage, setReplyMessage] = useState('')
 
-  // ── Added for password change ──
+  // Password change states
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmNewPassword, setConfirmNewPassword] = useState('')
@@ -53,8 +53,15 @@ export default function AdminPage() {
   const [pwLoading, setPwLoading] = useState(false)
 
   useEffect(() => {
-    if (sessionStorage.getItem('ma_admin') === 'true') { setAuth(true); loadAll() }
-    else setLoading(false)
+    // Check if already logged in via Supabase session
+    db.supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        setAuth(true)
+        loadAll()
+      } else {
+        setLoading(false)
+      }
+    })
   }, [])
 
   const loadAll = async () => {
@@ -98,13 +105,31 @@ export default function AdminPage() {
 
   const login = async () => {
     try {
-      const res = await fetch('/api/admin/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password }) })
-      if (res.ok) { sessionStorage.setItem('ma_admin', 'true'); setAuth(true); setPassword(''); loadAll() }
-      else setLoginError('Invalid password')
-    } catch (e) { setLoginError('Login failed') }
+      // Use Supabase auth with hardcoded admin email (no email field shown to user)
+      const { data, error } = await db.supabase.auth.signInWithPassword({
+        email: 'info@maestatebuilder.co.uk',  // ← CHANGE THIS to your real admin email
+        password: password
+      })
+
+      if (error) {
+        setLoginError(error.message || 'Invalid password')
+        return
+      }
+
+      // Supabase sets session automatically — no sessionStorage needed
+      setAuth(true)
+      setPassword('')
+      loadAll()
+    } catch (e) {
+      setLoginError('Login failed')
+    }
   }
 
-  const logout = () => { sessionStorage.removeItem('ma_admin'); setAuth(false) }
+  const logout = async () => {
+    await db.supabase.auth.signOut()
+    setAuth(false)
+  }
+
   const show = (m, err = false) => { setMsg({ m, err }); setTimeout(() => setMsg(null), 3000) }
 
   const upload = (cb) => {
@@ -117,7 +142,6 @@ export default function AdminPage() {
     i.click()
   }
 
-  // ── FIXED: Password change handler – calls server API route ──
   const handleChangePassword = async () => {
     if (newPassword !== confirmNewPassword) {
       show('New passwords do not match', true)
@@ -142,15 +166,11 @@ export default function AdminPage() {
 
       const result = await res.json()
 
-      if (!res.ok) {
-        throw new Error('Network/server error')
-      }
-
-      if (!result.success) {
+      if (!res.ok || !result.success) {
         throw new Error(result.error || 'Failed to change password')
       }
 
-      show(result.message || 'Password changed successfully! IMPORTANT: Update ADMIN_PASSWORD env var in Vercel to the new password and redeploy, otherwise login will fail.')
+      show(result.message || 'Password changed successfully!')
       setCurrentPassword('')
       setNewPassword('')
       setConfirmNewPassword('')
@@ -165,10 +185,35 @@ export default function AdminPage() {
   if (!auth) return (
     <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl p-8 shadow-xl w-full max-w-md">
-        <div className="text-center mb-6"><div className="w-16 h-16 bg-slate-800 rounded-2xl flex items-center justify-center mx-auto mb-4"><Settings className="w-8 h-8 text-white"/></div><h1 className="text-2xl font-bold">Admin Login</h1></div>
+        <div className="text-center mb-6">
+          <div className="w-16 h-16 bg-slate-800 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <Settings className="w-8 h-8 text-white"/>
+          </div>
+          <h1 className="text-2xl font-bold">Admin Login</h1>
+        </div>
         {loginError && <p className="text-red-500 text-center mb-4">{loginError}</p>}
-        <div className="relative mb-4"><input type={showPw?"text":"password"} placeholder="Password" value={password} onChange={e=>setPassword(e.target.value)} onKeyPress={e=>e.key==='Enter'&&login()} className="w-full px-4 py-3 border rounded-xl pr-12"/><button onClick={()=>setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">{showPw?<EyeOff className="w-5 h-5"/>:<Eye className="w-5 h-5"/>}</button></div>
-        <button onClick={login} className="w-full bg-slate-800 text-white py-3 rounded-xl font-semibold hover:bg-slate-700">Login</button>
+        <div className="relative mb-4">
+          <input 
+            type={showPw ? "text" : "password"} 
+            placeholder="Password" 
+            value={password} 
+            onChange={e => setPassword(e.target.value)} 
+            onKeyPress={e => e.key === 'Enter' && login()} 
+            className="w-full px-4 py-3 border rounded-xl pr-12"
+          />
+          <button 
+            onClick={() => setShowPw(!showPw)} 
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
+          >
+            {showPw ? <EyeOff className="w-5 h-5"/> : <Eye className="w-5 h-5"/>}
+          </button>
+        </div>
+        <button 
+          onClick={login} 
+          className="w-full bg-slate-800 text-white py-3 rounded-xl font-semibold hover:bg-slate-700"
+        >
+          Login
+        </button>
       </div>
     </div>
   )
@@ -191,7 +236,17 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-screen bg-slate-100">
-      <div className="bg-white shadow-sm border-b"><div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center"><h1 className="text-2xl font-bold">Admin Panel</h1><div className="flex items-center gap-4">{msg&&<span className={`text-sm ${msg.err?'text-red-600':'text-green-600'}`}>{msg.m}</span>}<button onClick={logout} className="flex items-center gap-2 text-red-600 hover:text-red-700"><LogOut className="w-5 h-5"/>Logout</button></div></div></div>
+      <div className="bg-white shadow-sm border-b">
+        <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+          <h1 className="text-2xl font-bold">Admin Panel</h1>
+          <div className="flex items-center gap-4">
+            {msg && <span className={`text-sm ${msg.err ? 'text-red-600' : 'text-green-600'}`}>{msg.m}</span>}
+            <button onClick={logout} className="flex items-center gap-2 text-red-600 hover:text-red-700">
+              <LogOut className="w-5 h-5"/>Logout
+            </button>
+          </div>
+        </div>
+      </div>
 
       <div className="max-w-7xl mx-auto px-4 py-6">
         <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
