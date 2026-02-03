@@ -1,15 +1,8 @@
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 
-const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 465,
-  secure: true,
-  auth: {
-    user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_APP_PASS,
-  },
-});
+const resend = new Resend(process.env.RESEND_API_KEY);
 
+// Same sender address
 const FROM_EMAIL = 'MA Estate Builder <info@maestatebuilder.co.uk>';
 const ADMIN_REPLY_EMAIL = process.env.ADMIN_EMAIL;
 
@@ -19,9 +12,9 @@ export default async function handler(req, res) {
   }
   const { to, subject, message, name } = req.body;
   try {
-    await transporter.sendMail({
+    await resend.emails.send({
       from: FROM_EMAIL,
-      to: to,
+      to: [to],
       replyTo: ADMIN_REPLY_EMAIL,
       subject: subject || 'Re: Your inquiry with MA Estate Builder',
       text: message,
