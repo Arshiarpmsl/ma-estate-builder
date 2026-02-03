@@ -117,7 +117,7 @@ export default function AdminPage() {
     i.click()
   }
 
-  // ── FIXED: Password change handler – calls server API route & shows real error ──
+  // ── FIXED: Password change handler – calls server API route ──
   const handleChangePassword = async () => {
     if (newPassword !== confirmNewPassword) {
       show('New passwords do not match', true)
@@ -140,17 +140,17 @@ export default function AdminPage() {
         })
       })
 
-      if (!res.ok) {
-        throw new Error('Network error – check connection')
-      }
-
       const result = await res.json()
+
+      if (!res.ok) {
+        throw new Error('Network/server error')
+      }
 
       if (!result.success) {
         throw new Error(result.error || 'Failed to change password')
       }
 
-      show(result.message || 'Password changed successfully!')
+      show(result.message || 'Password changed successfully! IMPORTANT: Update ADMIN_PASSWORD env var in Vercel to the new password and redeploy, otherwise login will fail.')
       setCurrentPassword('')
       setNewPassword('')
       setConfirmNewPassword('')
@@ -651,7 +651,7 @@ export default function AdminPage() {
               Change Password
             </h2>
             <p className="text-slate-600 mb-6">
-              You must enter your current password to verify your identity.
+              Enter your current password to verify your identity.
             </p>
 
             <div className="space-y-5">
