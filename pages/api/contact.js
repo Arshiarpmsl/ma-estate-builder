@@ -12,7 +12,7 @@ const transporter = nodemailer.createTransport({
 });
 
 const FROM_EMAIL = 'MA Estate Builder <info@maestatebuilder.co.uk>';
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
+const NOTIFICATION_EMAIL = process.env.NOTIFICATION_EMAIL;
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -31,7 +31,7 @@ export default async function handler(req, res) {
     // Admin notification
     await transporter.sendMail({
       from: FROM_EMAIL,
-      to: ADMIN_EMAIL,
+      to: NOTIFICATION_EMAIL,
       replyTo: email,
       subject: `New contact form message from ${name}`,
       text: `Name: ${name}\nEmail: ${email}\nPhone: ${phone || 'N/A'}\nMessage: ${message}`,
@@ -49,7 +49,7 @@ export default async function handler(req, res) {
     await transporter.sendMail({
       from: FROM_EMAIL,
       to: email,
-      replyTo: ADMIN_EMAIL,
+      replyTo: NOTIFICATION_EMAIL,
       subject: 'Thank you for contacting MA Estate Builder',
       text: `Hi ${name},\n\nThank you for reaching out! We have received your message and will get back to you as soon as possible.\n\nBest regards,\nMA Estate Builder Team`,
       html: `
