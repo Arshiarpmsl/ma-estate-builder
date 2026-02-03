@@ -44,7 +44,7 @@ export default function AdminPage() {
   const [replySubject, setReplySubject] = useState('')
   const [replyMessage, setReplyMessage] = useState('')
 
-  // Password change states
+  // ── Added for password change ──
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmNewPassword, setConfirmNewPassword] = useState('')
@@ -53,7 +53,6 @@ export default function AdminPage() {
   const [pwLoading, setPwLoading] = useState(false)
 
   useEffect(() => {
-    // Check if already logged in via Supabase session
     db.supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         setAuth(true)
@@ -105,9 +104,8 @@ export default function AdminPage() {
 
   const login = async () => {
     try {
-      // Use Supabase auth with hardcoded admin email (no email field shown to user)
       const { data, error } = await db.supabase.auth.signInWithPassword({
-        email: 'info@maestatebuilder.co.uk',  // ← CHANGE THIS to your real admin email
+        email: 'info@maestatebuilder.co.uk',  // CHANGE THIS to your actual admin email from Supabase Auth Users
         password: password
       })
 
@@ -116,7 +114,6 @@ export default function AdminPage() {
         return
       }
 
-      // Supabase sets session automatically — no sessionStorage needed
       setAuth(true)
       setPassword('')
       loadAll()
@@ -125,9 +122,9 @@ export default function AdminPage() {
     }
   }
 
-  const logout = async () => {
-    await db.supabase.auth.signOut()
-    setAuth(false)
+  const logout = () => { 
+    db.supabase.auth.signOut()
+    setAuth(false) 
   }
 
   const show = (m, err = false) => { setMsg({ m, err }); setTimeout(() => setMsg(null), 3000) }
@@ -185,35 +182,10 @@ export default function AdminPage() {
   if (!auth) return (
     <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl p-8 shadow-xl w-full max-w-md">
-        <div className="text-center mb-6">
-          <div className="w-16 h-16 bg-slate-800 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <Settings className="w-8 h-8 text-white"/>
-          </div>
-          <h1 className="text-2xl font-bold">Admin Login</h1>
-        </div>
+        <div className="text-center mb-6"><div className="w-16 h-16 bg-slate-800 rounded-2xl flex items-center justify-center mx-auto mb-4"><Settings className="w-8 h-8 text-white"/></div><h1 className="text-2xl font-bold">Admin Login</h1></div>
         {loginError && <p className="text-red-500 text-center mb-4">{loginError}</p>}
-        <div className="relative mb-4">
-          <input 
-            type={showPw ? "text" : "password"} 
-            placeholder="Password" 
-            value={password} 
-            onChange={e => setPassword(e.target.value)} 
-            onKeyPress={e => e.key === 'Enter' && login()} 
-            className="w-full px-4 py-3 border rounded-xl pr-12"
-          />
-          <button 
-            onClick={() => setShowPw(!showPw)} 
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
-          >
-            {showPw ? <EyeOff className="w-5 h-5"/> : <Eye className="w-5 h-5"/>}
-          </button>
-        </div>
-        <button 
-          onClick={login} 
-          className="w-full bg-slate-800 text-white py-3 rounded-xl font-semibold hover:bg-slate-700"
-        >
-          Login
-        </button>
+        <div className="relative mb-4"><input type={showPw?"text":"password"} placeholder="Password" value={password} onChange={e=>setPassword(e.target.value)} onKeyPress={e=>e.key==='Enter'&&login()} className="w-full px-4 py-3 border rounded-xl pr-12"/><button onClick={()=>setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">{showPw?<EyeOff className="w-5 h-5"/>:<Eye className="w-5 h-5"/>}</button></div>
+        <button onClick={login} className="w-full bg-slate-800 text-white py-3 rounded-xl font-semibold hover:bg-slate-700">Login</button>
       </div>
     </div>
   )
@@ -236,17 +208,7 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-screen bg-slate-100">
-      <div className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold">Admin Panel</h1>
-          <div className="flex items-center gap-4">
-            {msg && <span className={`text-sm ${msg.err ? 'text-red-600' : 'text-green-600'}`}>{msg.m}</span>}
-            <button onClick={logout} className="flex items-center gap-2 text-red-600 hover:text-red-700">
-              <LogOut className="w-5 h-5"/>Logout
-            </button>
-          </div>
-        </div>
-      </div>
+      <div className="bg-white shadow-sm border-b"><div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center"><h1 className="text-2xl font-bold">Admin Panel</h1><div className="flex items-center gap-4">{msg&&<span className={`text-sm ${msg.err?'text-red-600':'text-green-600'}`}>{msg.m}</span>}<button onClick={logout} className="flex items-center gap-2 text-red-600 hover:text-red-700"><LogOut className="w-5 h-5"/>Logout</button></div></div></div>
 
       <div className="max-w-7xl mx-auto px-4 py-6">
         <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
