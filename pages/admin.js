@@ -53,7 +53,7 @@ export default function AdminPage() {
   const [showNewPw, setShowNewPw] = useState(false)
   const [pwLoading, setPwLoading] = useState(false)
 
-  // Check Supabase session on load (prevents crash if client not ready)
+  // Check Supabase session on load
   useEffect(() => {
     const checkSession = async () => {
       if (db && db.supabase) {
@@ -113,7 +113,7 @@ export default function AdminPage() {
     }
   }
 
-  // FIXED: Real Supabase login with email + password (dynamic, works with password change)
+  // FIXED: Real Supabase login with email + password field
   const login = async () => {
     if (!email || !password) {
       setLoginError('Email and password required')
@@ -123,7 +123,7 @@ export default function AdminPage() {
     try {
       const { data, error } = await db.supabase.auth.signInWithPassword({
         email: email.trim().toLowerCase(),
-        password: password
+        password
       })
 
       if (error) {
@@ -159,6 +159,7 @@ export default function AdminPage() {
     i.click()
   }
 
+  // FIXED: Direct password change using real session (no API route needed)
   const handleChangePassword = async () => {
     if (newPassword !== confirmNewPassword) {
       show('New passwords do not match', true)
@@ -172,10 +173,15 @@ export default function AdminPage() {
     setPwLoading(true)
 
     try {
-      // Since we have real session, we can update directly (safe because current password is verified by re-signin below)
-      // First, verify current password by re-signing in
+      // Get current user email from session
+      const { data: { user }, error: userError } = await db.supabase.auth.getUser()
+      if (userError || !user) {
+        throw new Error('Not authenticated')
+      }
+
+      // Verify current password by temporary re-signin
       const { error: signInError } = await db.supabase.auth.signInWithPassword({
-        email: (await db.supabase.auth.getUser()).data.user.email,
+        email: user.email,
         password: currentPassword
       })
 
