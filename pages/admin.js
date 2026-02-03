@@ -45,7 +45,7 @@ export default function AdminPage() {
   const [replySubject, setReplySubject] = useState('')
   const [replyMessage, setReplyMessage] = useState('')
 
-  // ── Added for password change ──
+  // Password change states
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmNewPassword, setConfirmNewPassword] = useState('')
@@ -53,7 +53,7 @@ export default function AdminPage() {
   const [showNewPw, setShowNewPw] = useState(false)
   const [pwLoading, setPwLoading] = useState(false)
 
-  // Safe session check on load (prevents crash)
+  // Safe Supabase session check on load
   useEffect(() => {
     const checkSession = async () => {
       if (db && db.supabase) {
@@ -113,7 +113,7 @@ export default function AdminPage() {
     }
   }
 
-  // FIXED: Real Supabase login with email + password field
+  // Real Supabase login with email + password
   const login = async () => {
     if (!email || !password) {
       setLoginError('Email and password required')
@@ -159,7 +159,7 @@ export default function AdminPage() {
     i.click()
   }
 
-  // FIXED: Direct password change using real session (no API route, no RPC)
+  // Direct password change using real session
   const handleChangePassword = async () => {
     if (newPassword !== confirmNewPassword) {
       show('New passwords do not match', true)
