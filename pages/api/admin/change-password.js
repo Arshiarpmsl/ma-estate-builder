@@ -1,36 +1,34 @@
-// New file: pages/api/admin/change-password.js
-import bcrypt from 'bcryptjs';
-import { db } from '@/lib/supabase';
+import bcrypt from 'bcryptjs'
+import { db } from '@/lib/supabase'
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).end();
+  if (req.method !== 'POST') return res.status(405).end()
+
+  const { currentPassword, newPassword } = req.body
+
+  const trimmedCurrent = currentPassword?.trim()
+  const trimmedNew = newPassword?.trim()
+
+  if (!trimmedCurrent || !trimmedNew || trimmedNew.length < 6) {
+    return res.status(400).json({ error: 'Invalid input' })
   }
 
-  const { currentPassword, newPassword, confirmPassword } = req.body;
+  const { data: company } = await db.from('company').select('admin_password_hash').single()
 
-  if (!currentPassword || !newPassword || newPassword !== confirmPassword) {
-    return res.status(400).json({ error: 'Passwords do not match or missing fields' });
+  let currentValid = false
+  if (company?.admin_password_hash) {
+    currentValid = await bcrypt.compare(trimmedCurrent, company.admin_password_hash)
+  } else {
+    currentValid = trimmedCurrent === process.env.ADMIN_PASSWORD
   }
 
-  if (newPassword.length < 6) {
-    return res.status(400).json({ error: 'New password must be at least 6 characters' });
+  if (!currentValid) {
+    return res.status(401).json({ error: 'Current password incorrect' })
   }
 
-  const { data: company, error } = await db.from('company').select('admin_password_hash').single();
+  const newHash = await bcrypt.hash(trimmedNew, 12)
 
-  if (error || !company?.admin_password_hash) {
-    return res.status(500).json({ error: 'Admin configuration error' });
-  }
+  await db.from('company').update({ admin_password_hash: newHash })
 
-  const isValid = await bcrypt.compare(currentPassword, company.admin_password_hash);
-  if (!isValid) {
-    return res.status(401).json({ error: 'Current password is incorrect' });
-  }
-
-  const newHash = await bcrypt.hash(newPassword, 12);
-
-  await db.from('company').update({ admin_password_hash: newHash });
-
-  res.status(200).json({ success: true });
+  res.status(200).json({ success: true })
 }
