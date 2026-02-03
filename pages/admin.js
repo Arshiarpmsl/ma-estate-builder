@@ -5,6 +5,7 @@ import { Settings, Building2, Hammer, Image, MessageSquare, User, Eye, EyeOff, L
 
 export default function AdminPage() {
   const [auth, setAuth] = useState(false)
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPw, setShowPw] = useState(false)
   const [loginError, setLoginError] = useState('')
@@ -44,7 +45,7 @@ export default function AdminPage() {
   const [replySubject, setReplySubject] = useState('')
   const [replyMessage, setReplyMessage] = useState('')
 
-  // ── Added for password change ──
+  // Password change states
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmNewPassword, setConfirmNewPassword] = useState('')
@@ -52,7 +53,7 @@ export default function AdminPage() {
   const [showNewPw, setShowNewPw] = useState(false)
   const [pwLoading, setPwLoading] = useState(false)
 
-  // Check Supabase session on load (safe – prevents crash)
+  // Check Supabase session on load (prevents crash if client not ready)
   useEffect(() => {
     const checkSession = async () => {
       if (db && db.supabase) {
@@ -112,21 +113,26 @@ export default function AdminPage() {
     }
   }
 
-  // FIXED: Login uses real Supabase auth (dynamic password, no static env var)
+  // FIXED: Real Supabase login with email + password (dynamic, works with password change)
   const login = async () => {
+    if (!email || !password) {
+      setLoginError('Email and password required')
+      return
+    }
+
     try {
-      // CHANGE THIS EMAIL to your real admin email in Supabase Auth
       const { data, error } = await db.supabase.auth.signInWithPassword({
-        email: 'info@maestatebuilder.co.uk',
+        email: email.trim().toLowerCase(),
         password: password
       })
 
       if (error) {
-        setLoginError(error.message || 'Invalid password')
+        setLoginError(error.message || 'Invalid credentials')
         return
       }
 
       setAuth(true)
+      setEmail('')
       setPassword('')
       loadAll()
     } catch (e) {
@@ -166,22 +172,27 @@ export default function AdminPage() {
     setPwLoading(true)
 
     try {
-      const res = await fetch('/api/change-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          current_plain_password: currentPassword,
-          new_plain_password: newPassword
-        })
+      // Since we have real session, we can update directly (safe because current password is verified by re-signin below)
+      // First, verify current password by re-signing in
+      const { error: signInError } = await db.supabase.auth.signInWithPassword({
+        email: (await db.supabase.auth.getUser()).data.user.email,
+        password: currentPassword
       })
 
-      const result = await res.json()
-
-      if (!res.ok || !result.success) {
-        throw new Error(result.error || 'Failed to change password')
+      if (signInError) {
+        throw new Error('Current password is incorrect')
       }
 
-      show(result.message || 'Password changed successfully!')
+      // Update password
+      const { error: updateError } = await db.supabase.auth.updateUser({
+        password: newPassword
+      })
+
+      if (updateError) {
+        throw new Error(updateError.message || 'Failed to change password')
+      }
+
+      show('Password changed successfully!')
       setCurrentPassword('')
       setNewPassword('')
       setConfirmNewPassword('')
@@ -196,10 +207,44 @@ export default function AdminPage() {
   if (!auth) return (
     <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl p-8 shadow-xl w-full max-w-md">
-        <div className="text-center mb-6"><div className="w-16 h-16 bg-slate-800 rounded-2xl flex items-center justify-center mx-auto mb-4"><Settings className="w-8 h-8 text-white"/></div><h1 className="text-2xl font-bold">Admin Login</h1></div>
+        <div className="text-center mb-6">
+          <div className="w-16 h-16 bg-slate-800 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <Settings className="w-8 h-8 text-white"/>
+          </div>
+          <h1 className="text-2xl font-bold">Admin Login</h1>
+        </div>
         {loginError && <p className="text-red-500 text-center mb-4">{loginError}</p>}
-        <div className="relative mb-4"><input type={showPw?"text":"password"} placeholder="Password" value={password} onChange={e=>setPassword(e.target.value)} onKeyPress={e=>e.key==='Enter'&&login()} className="w-full px-4 py-3 border rounded-xl pr-12"/><button onClick={()=>setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">{showPw?<EyeOff className="w-5 h-5"/>:<Eye className="w-5 h-5"/>}</button></div>
-        <button onClick={login} className="w-full bg-slate-800 text-white py-3 rounded-xl font-semibold hover:bg-slate-700">Login</button>
+        <div className="mb-4">
+          <input 
+            type="email" 
+            placeholder="Email" 
+            value={email} 
+            onChange={e => setEmail(e.target.value)} 
+            className="w-full px-4 py-3 border rounded-xl"
+          />
+        </div>
+        <div className="relative mb-4">
+          <input 
+            type={showPw ? "text" : "password"} 
+            placeholder="Password" 
+            value={password} 
+            onChange={e => setPassword(e.target.value)} 
+            onKeyPress={e => e.key === 'Enter' && login()} 
+            className="w-full px-4 py-3 border rounded-xl pr-12"
+          />
+          <button 
+            onClick={() => setShowPw(!showPw)} 
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
+          >
+            {showPw ? <EyeOff className="w-5 h-5"/> : <Eye className="w-5 h-5"/>}
+          </button>
+        </div>
+        <button 
+          onClick={login} 
+          className="w-full bg-slate-800 text-white py-3 rounded-xl font-semibold hover:bg-slate-700"
+        >
+          Login
+        </button>
       </div>
     </div>
   )
@@ -237,8 +282,7 @@ export default function AdminPage() {
           <Tab id="security" icon={Lock} label="Security"/>
         </div>
 
-        {/* All your original tabs remain exactly the same – pasted verbatim from your last code */}
-
+        {/* HOMEPAGE TAB */}
         {tab==='homepage'&&<div className="space-y-6">
           <div className="bg-white rounded-2xl p-6 shadow-lg">
             <h2 className="text-xl font-bold mb-4">Hero Carousel & Text</h2>
