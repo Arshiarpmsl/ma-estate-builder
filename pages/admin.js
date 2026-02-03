@@ -53,22 +53,21 @@ export default function AdminPage() {
   const [showNewPw, setShowNewPw] = useState(false)
   const [pwLoading, setPwLoading] = useState(false)
 
-  // Check Supabase session on load
+  // Safe session check on load
   useEffect(() => {
     const checkSession = async () => {
-      if (db && db.supabase) {
-        try {
-          const { data: { session } } = await db.supabase.auth.getSession()
-          if (session) {
-            setAuth(true)
-            loadAll()
-            return
-          }
-        } catch (e) {
-          console.error('Session check error:', e)
+      try {
+        const { data: { session } } = await db.supabase.auth.getSession()
+        if (session) {
+          setAuth(true)
+          loadAll()
+        } else {
+          setLoading(false)
         }
+      } catch (e) {
+        console.error('Session check failed:', e)
+        setLoading(false)
       }
-      setLoading(false)
     }
 
     checkSession()
@@ -113,7 +112,7 @@ export default function AdminPage() {
     }
   }
 
-  // FIXED: Real Supabase login with email + password field
+  // FIXED: Real Supabase login with email + password
   const login = async () => {
     if (!email || !password) {
       setLoginError('Email and password required')
@@ -122,7 +121,7 @@ export default function AdminPage() {
 
     try {
       const { data, error } = await db.supabase.auth.signInWithPassword({
-        email: email.trim().toLowerCase(),
+        email: email.trim(),
         password
       })
 
@@ -141,9 +140,7 @@ export default function AdminPage() {
   }
 
   const logout = async () => {
-    if (db && db.supabase) {
-      await db.supabase.auth.signOut()
-    }
+    await db.supabase.auth.signOut()
     setAuth(false)
   }
 
@@ -159,7 +156,7 @@ export default function AdminPage() {
     i.click()
   }
 
-  // FIXED: Direct password change using real session (no API route needed)
+  // FIXED: Direct password change using real session (no API route)
   const handleChangePassword = async () => {
     if (newPassword !== confirmNewPassword) {
       show('New passwords do not match', true)
@@ -173,13 +170,13 @@ export default function AdminPage() {
     setPwLoading(true)
 
     try {
-      // Get current user email from session
+      // Get current user
       const { data: { user }, error: userError } = await db.supabase.auth.getUser()
       if (userError || !user) {
         throw new Error('Not authenticated')
       }
 
-      // Verify current password by temporary re-signin
+      // Verify current password by re-signin
       const { error: signInError } = await db.supabase.auth.signInWithPassword({
         email: user.email,
         password: currentPassword
