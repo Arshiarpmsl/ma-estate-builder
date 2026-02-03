@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react'
 import { db } from '@/lib/supabase'
 import Stars from '@/components/Stars'
-import { Settings, Building2, Hammer, Image, MessageSquare, User, Eye, EyeOff, LogOut, Save, Plus, Trash2, X, Loader2, Mail, Home, Edit2, RefreshCw, Lock } from 'lucide-react'
+import { Settings, Building2, Hammer, Image, MessageSquare, User, Eye, EyeOff, LogOut, Save, Plus, Trash2, X, Loader2, Mail, Home, Edit2, RefreshCw } from 'lucide-react'
 
 export default function AdminPage() {
   const [auth, setAuth] = useState(false)
-  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPw, setShowPw] = useState(false)
   const [loginError, setLoginError] = useState('')
@@ -45,33 +44,9 @@ export default function AdminPage() {
   const [replySubject, setReplySubject] = useState('')
   const [replyMessage, setReplyMessage] = useState('')
 
-  // Password change states
-  const [currentPassword, setCurrentPassword] = useState('')
-  const [newPassword, setNewPassword] = useState('')
-  const [confirmNewPassword, setConfirmNewPassword] = useState('')
-  const [showCurrentPw, setShowCurrentPw] = useState(false)
-  const [showNewPw, setShowNewPw] = useState(false)
-  const [pwLoading, setPwLoading] = useState(false)
-
-  // Safe Supabase session check on load
   useEffect(() => {
-    const checkSession = async () => {
-      if (db && db.supabase) {
-        try {
-          const { data: { session } } = await db.supabase.auth.getSession()
-          if (session) {
-            setAuth(true)
-            loadAll()
-            return
-          }
-        } catch (e) {
-          console.error('Session check error:', e)
-        }
-      }
-      setLoading(false)
-    }
-
-    checkSession()
+    if (sessionStorage.getItem('ma_admin') === 'true') { setAuth(true); loadAll() }
+    else setLoading(false)
   }, [])
 
   const loadAll = async () => {
@@ -113,40 +88,15 @@ export default function AdminPage() {
     }
   }
 
-  // Real Supabase login with email + password
   const login = async () => {
-    if (!email || !password) {
-      setLoginError('Email and password required')
-      return
-    }
-
     try {
-      const { data, error } = await db.supabase.auth.signInWithPassword({
-        email: email.trim().toLowerCase(),
-        password
-      })
-
-      if (error) {
-        setLoginError(error.message || 'Invalid credentials')
-        return
-      }
-
-      setAuth(true)
-      setEmail('')
-      setPassword('')
-      loadAll()
-    } catch (e) {
-      setLoginError('Login failed')
-    }
+      const res = await fetch('/api/admin/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password }) })
+      if (res.ok) { sessionStorage.setItem('ma_admin', 'true'); setAuth(true); setPassword(''); loadAll() }
+      else setLoginError('Invalid password')
+    } catch (e) { setLoginError('Login failed') }
   }
 
-  const logout = async () => {
-    if (db && db.supabase) {
-      await db.supabase.auth.signOut()
-    }
-    setAuth(false)
-  }
-
+  const logout = () => { sessionStorage.removeItem('ma_admin'); setAuth(false) }
   const show = (m, err = false) => { setMsg({ m, err }); setTimeout(() => setMsg(null), 3000) }
 
   const upload = (cb) => {
@@ -159,98 +109,13 @@ export default function AdminPage() {
     i.click()
   }
 
-  // Direct password change using real session
-  const handleChangePassword = async () => {
-    if (newPassword !== confirmNewPassword) {
-      show('New passwords do not match', true)
-      return
-    }
-    if (newPassword.length < 6) {
-      show('New password must be at least 6 characters', true)
-      return
-    }
-
-    setPwLoading(true)
-
-    try {
-      // Get current user
-      const { data: { user }, error: userError } = await db.supabase.auth.getUser()
-      if (userError || !user) {
-        throw new Error('Not authenticated')
-      }
-
-      // Verify current password by re-signin
-      const { error: signInError } = await db.supabase.auth.signInWithPassword({
-        email: user.email,
-        password: currentPassword
-      })
-
-      if (signInError) {
-        throw new Error('Current password is incorrect')
-      }
-
-      // Update password
-      const { error: updateError } = await db.supabase.auth.updateUser({
-        password: newPassword
-      })
-
-      if (updateError) {
-        throw new Error(updateError.message || 'Failed to change password')
-      }
-
-      show('Password changed successfully!')
-      setCurrentPassword('')
-      setNewPassword('')
-      setConfirmNewPassword('')
-    } catch (err) {
-      console.error('Password change error:', err)
-      show(err.message || 'Server error', true)
-    } finally {
-      setPwLoading(false)
-    }
-  }
-
   if (!auth) return (
     <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl p-8 shadow-xl w-full max-w-md">
-        <div className="text-center mb-6">
-          <div className="w-16 h-16 bg-slate-800 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <Settings className="w-8 h-8 text-white"/>
-          </div>
-          <h1 className="text-2xl font-bold">Admin Login</h1>
-        </div>
+        <div className="text-center mb-6"><div className="w-16 h-16 bg-slate-800 rounded-2xl flex items-center justify-center mx-auto mb-4"><Settings className="w-8 h-8 text-white"/></div><h1 className="text-2xl font-bold">Admin Login</h1></div>
         {loginError && <p className="text-red-500 text-center mb-4">{loginError}</p>}
-        <div className="mb-4">
-          <input 
-            type="email" 
-            placeholder="Email" 
-            value={email} 
-            onChange={e => setEmail(e.target.value)} 
-            className="w-full px-4 py-3 border rounded-xl"
-          />
-        </div>
-        <div className="relative mb-4">
-          <input 
-            type={showPw ? "text" : "password"} 
-            placeholder="Password" 
-            value={password} 
-            onChange={e => setPassword(e.target.value)} 
-            onKeyPress={e => e.key === 'Enter' && login()} 
-            className="w-full px-4 py-3 border rounded-xl pr-12"
-          />
-          <button 
-            onClick={() => setShowPw(!showPw)} 
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
-          >
-            {showPw ? <EyeOff className="w-5 h-5"/> : <Eye className="w-5 h-5"/>}
-          </button>
-        </div>
-        <button 
-          onClick={login} 
-          className="w-full bg-slate-800 text-white py-3 rounded-xl font-semibold hover:bg-slate-700"
-        >
-          Login
-        </button>
+        <div className="relative mb-4"><input type={showPw?"text":"password"} placeholder="Password" value={password} onChange={e=>setPassword(e.target.value)} onKeyPress={e=>e.key==='Enter'&&login()} className="w-full px-4 py-3 border rounded-xl pr-12"/><button onClick={()=>setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">{showPw?<EyeOff className="w-5 h-5"/>:<Eye className="w-5 h-5"/>}</button></div>
+        <button onClick={login} className="w-full bg-slate-800 text-white py-3 rounded-xl font-semibold hover:bg-slate-700">Login</button>
       </div>
     </div>
   )
@@ -285,7 +150,6 @@ export default function AdminPage() {
           <Tab id="beforeafter" icon={RefreshCw} label="Before & After"/>
           <Tab id="reviews" icon={MessageSquare} label="Reviews"/>
           <Tab id="messages" icon={Mail} label="Messages"/>
-          <Tab id="security" icon={Lock} label="Security"/>
         </div>
 
         {/* HOMEPAGE TAB */}
@@ -724,90 +588,6 @@ export default function AdminPage() {
             </div>
           )}
         </div>}
-
-        {/* Security / Change Password Tab */}
-        {tab === 'security' && (
-          <div className="bg-white rounded-2xl p-6 shadow-lg max-w-lg mx-auto">
-            <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
-              <Lock className="w-6 h-6 text-amber-600" />
-              Change Password
-            </h2>
-            <p className="text-slate-600 mb-6">
-              Enter your current password to verify your identity.
-            </p>
-
-            <div className="space-y-5">
-              <div className="relative">
-                <label className="block text-sm font-medium text-slate-700 mb-1">Current Password</label>
-                <input
-                  type={showCurrentPw ? 'text' : 'password'}
-                  value={currentPassword}
-                  onChange={e => setCurrentPassword(e.target.value)}
-                  className="w-full px-4 py-3 border rounded-xl pr-12"
-                  placeholder="••••••••"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowCurrentPw(!showCurrentPw)}
-                  className="absolute right-3 top-[42px] text-slate-400"
-                >
-                  {showCurrentPw ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </button>
-              </div>
-
-              <div className="relative">
-                <label className="block text-sm font-medium text-slate-700 mb-1">New Password</label>
-                <input
-                  type={showNewPw ? 'text' : 'password'}
-                  value={newPassword}
-                  onChange={e => setNewPassword(e.target.value)}
-                  className="w-full px-4 py-3 border rounded-xl pr-12"
-                  placeholder="Minimum 6 characters"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowNewPw(!showNewPw)}
-                  className="absolute right-3 top-[42px] text-slate-400"
-                >
-                  {showNewPw ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </button>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Confirm New Password</label>
-                <input
-                  type="password"
-                  value={confirmNewPassword}
-                  onChange={e => setConfirmNewPassword(e.target.value)}
-                  className="w-full px-4 py-3 border rounded-xl"
-                  placeholder="Confirm new password"
-                />
-              </div>
-
-              <button
-                onClick={handleChangePassword}
-                disabled={pwLoading}
-                className={`w-full py-3 px-6 rounded-xl text-white font-semibold flex items-center justify-center gap-2 transition ${
-                  pwLoading
-                    ? 'bg-green-400 cursor-not-allowed'
-                    : 'bg-green-600 hover:bg-green-700'
-                }`}
-              >
-                {pwLoading ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    Changing...
-                  </>
-                ) : (
-                  <>
-                    <Save className="w-5 h-5" />
-                    Update Password
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        )}
       </div>
 
       {msg && <div className={`fixed bottom-4 right-4 px-4 py-2 rounded-lg shadow-lg ${msg.err?'bg-red-500':'bg-green-500'} text-white`}>{msg.m}</div>}
