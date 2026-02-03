@@ -52,15 +52,25 @@ export default function AdminPage() {
   const [showNewPw, setShowNewPw] = useState(false)
   const [pwLoading, setPwLoading] = useState(false)
 
+  // Check Supabase session on load (safe – prevents crash if client not ready)
   useEffect(() => {
-    db.supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        setAuth(true)
-        loadAll()
-      } else {
-        setLoading(false)
+    const checkSession = async () => {
+      if (db && db.supabase) {
+        try {
+          const { data: { session } } = await db.supabase.auth.getSession()
+          if (session) {
+            setAuth(true)
+            loadAll()
+            return
+          }
+        } catch (e) {
+          console.error('Session check error:', e)
+        }
       }
-    })
+      setLoading(false)
+    }
+
+    checkSession()
   }, [])
 
   const loadAll = async () => {
@@ -102,10 +112,12 @@ export default function AdminPage() {
     }
   }
 
+  // New login: uses Supabase auth (dynamic password, no static env var)
   const login = async () => {
     try {
+      // CHANGE THIS EMAIL to your real admin email in Supabase Auth
       const { data, error } = await db.supabase.auth.signInWithPassword({
-        email: 'info@maestatebuilder.co.uk',  // CHANGE THIS to your actual admin email from Supabase Auth Users
+        email: 'info@maestatebuilder.co.uk',
         password: password
       })
 
@@ -122,9 +134,11 @@ export default function AdminPage() {
     }
   }
 
-  const logout = () => { 
-    db.supabase.auth.signOut()
-    setAuth(false) 
+  const logout = async () => {
+    if (db && db.supabase) {
+      await db.supabase.auth.signOut()
+    }
+    setAuth(false)
   }
 
   const show = (m, err = false) => { setMsg({ m, err }); setTimeout(() => setMsg(null), 3000) }
