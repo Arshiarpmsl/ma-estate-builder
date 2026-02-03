@@ -1,18 +1,11 @@
 import { db } from '@/lib/supabase';
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 
-const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 465,
-  secure: true,
-  auth: {
-    user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_APP_PASS,
-  },
-});
+const resend = new Resend(process.env.RESEND_API_KEY);
 
+// Your chosen sender address
 const FROM_EMAIL = 'MA Estate Builder <info@maestatebuilder.co.uk>';
-const NOTIFICATION_EMAIL = process.env.NOTIFICATION_EMAIL;
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -20,18 +13,17 @@ export default async function handler(req, res) {
   }
   const { name, email, phone, message } = req.body;
   try {
-    // Save to Supabase (unchanged)
+    // Save to Supabase
     await db.submitContact({
       name,
       email,
       phone: phone || null,
       message,
     });
-
     // Admin notification
-    await transporter.sendMail({
+    await resend.emails.send({
       from: FROM_EMAIL,
-      to: NOTIFICATION_EMAIL,
+      to: [ADMIN_EMAIL],
       replyTo: email,
       subject: `New contact form message from ${name}`,
       text: `Name: ${name}\nEmail: ${email}\nPhone: ${phone || 'N/A'}\nMessage: ${message}`,
@@ -44,12 +36,11 @@ export default async function handler(req, res) {
         <p>${message.replace(/\n/g, '<br>')}</p>
       `,
     });
-
     // Customer thank-you auto-reply
-    await transporter.sendMail({
+    await resend.emails.send({
       from: FROM_EMAIL,
-      to: email,
-      replyTo: NOTIFICATION_EMAIL,
+      to: [email],
+      replyTo: ADMIN_EMAIL,
       subject: 'Thank you for contacting MA Estate Builder',
       text: `Hi ${name},\n\nThank you for reaching out! We have received your message and will get back to you as soon as possible.\n\nBest regards,\nMA Estate Builder Team`,
       html: `
@@ -59,7 +50,6 @@ export default async function handler(req, res) {
         <p>Best regards,<br><strong>MA Estate Builder Team</strong></p>
       `,
     });
-
     res.status(200).json({ success: true });
   } catch (error) {
     console.error('Error in contact handler:', error);
