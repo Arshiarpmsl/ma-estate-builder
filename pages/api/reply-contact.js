@@ -1,8 +1,15 @@
-import { Resend } from 'resend';
+import nodemailer from 'nodemailer';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const transporter = nodemailer.createTransport({
+  host: 'smtp.gmail.com',
+  port: 465,
+  secure: true,
+  auth: {
+    user: process.env.GMAIL_USER,
+    pass: process.env.GMAIL_APP_PASS,
+  },
+});
 
-// Same sender address
 const FROM_EMAIL = 'MA Estate Builder <info@maestatebuilder.co.uk>';
 const ADMIN_REPLY_EMAIL = process.env.ADMIN_EMAIL;
 
@@ -10,13 +17,11 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).end();
   }
-
   const { to, subject, message, name } = req.body;
-
   try {
-    await resend.emails.send({
+    await transporter.sendMail({
       from: FROM_EMAIL,
-      to: [to],
+      to: to,
       replyTo: ADMIN_REPLY_EMAIL,
       subject: subject || 'Re: Your inquiry with MA Estate Builder',
       text: message,
@@ -26,7 +31,6 @@ export default async function handler(req, res) {
         <p>Best regards,<br>MA Estate Builder Team</p>
       `,
     });
-
     res.status(200).json({ success: true });
   } catch (error) {
     console.error('Error in response handler:', error);
