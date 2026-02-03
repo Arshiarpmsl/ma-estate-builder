@@ -1,9 +1,16 @@
 import { db } from '@/lib/supabase';
-import { Resend } from 'resend';
+import nodemailer from 'nodemailer';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const transporter = nodemailer.createTransport({
+  host: 'smtp.gmail.com',
+  port: 465,
+  secure: true,
+  auth: {
+    user: process.env.GMAIL_USER,
+    pass: process.env.GMAIL_APP_PASS,
+  },
+});
 
-// Your chosen sender address
 const FROM_EMAIL = 'MA Estate Builder <info@maestatebuilder.co.uk>';
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
 
@@ -11,11 +18,9 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).end();
   }
-
   const { name, email, phone, message } = req.body;
-
   try {
-    // Save to Supabase
+    // Save to Supabase (unchanged)
     await db.submitContact({
       name,
       email,
@@ -24,9 +29,9 @@ export default async function handler(req, res) {
     });
 
     // Admin notification
-    await resend.emails.send({
+    await transporter.sendMail({
       from: FROM_EMAIL,
-      to: [ADMIN_EMAIL],
+      to: ADMIN_EMAIL,
       replyTo: email,
       subject: `New contact form message from ${name}`,
       text: `Name: ${name}\nEmail: ${email}\nPhone: ${phone || 'N/A'}\nMessage: ${message}`,
@@ -41,9 +46,9 @@ export default async function handler(req, res) {
     });
 
     // Customer thank-you auto-reply
-    await resend.emails.send({
+    await transporter.sendMail({
       from: FROM_EMAIL,
-      to: [email],
+      to: email,
       replyTo: ADMIN_EMAIL,
       subject: 'Thank you for contacting MA Estate Builder',
       text: `Hi ${name},\n\nThank you for reaching out! We have received your message and will get back to you as soon as possible.\n\nBest regards,\nMA Estate Builder Team`,
