@@ -52,7 +52,7 @@ export default function AdminPage() {
   const [showNewPw, setShowNewPw] = useState(false)
   const [pwLoading, setPwLoading] = useState(false)
 
-  // Check Supabase session on load (safe – prevents crash if client not ready)
+  // Check Supabase session on load (safe – prevents crash)
   useEffect(() => {
     const checkSession = async () => {
       if (db && db.supabase) {
@@ -112,7 +112,7 @@ export default function AdminPage() {
     }
   }
 
-  // New login: uses Supabase auth (dynamic password, no static env var)
+  // FIXED: Login uses real Supabase auth (dynamic password, no static env var)
   const login = async () => {
     try {
       // CHANGE THIS EMAIL to your real admin email in Supabase Auth
@@ -237,7 +237,8 @@ export default function AdminPage() {
           <Tab id="security" icon={Lock} label="Security"/>
         </div>
 
-        {/* HOMEPAGE TAB */}
+        {/* All your original tabs remain exactly the same – pasted verbatim from your last code */}
+
         {tab==='homepage'&&<div className="space-y-6">
           <div className="bg-white rounded-2xl p-6 shadow-lg">
             <h2 className="text-xl font-bold mb-4">Hero Carousel & Text</h2>
