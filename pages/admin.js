@@ -44,6 +44,14 @@ export default function AdminPage() {
   const [replySubject, setReplySubject] = useState('')
   const [replyMessage, setReplyMessage] = useState('')
 
+  // Change Password state (for the new tab)
+  const [currentPw, setCurrentPw] = useState('')
+  const [newPw, setNewPw] = useState('')
+  const [confirmPw, setConfirmPw] = useState('')
+  const [showCurrent, setShowCurrent] = useState(false)
+  const [showNew, setShowNew] = useState(false)
+  const [showConfirm, setShowConfirm] = useState(false)
+
   useEffect(() => {
     if (sessionStorage.getItem('ma_admin') === 'true') { setAuth(true); loadAll() }
     else setLoading(false)
@@ -97,6 +105,7 @@ export default function AdminPage() {
   }
 
   const logout = () => { sessionStorage.removeItem('ma_admin'); setAuth(false) }
+
   const show = (m, err = false) => { setMsg({ m, err }); setTimeout(() => setMsg(null), 3000) }
 
   const upload = (cb) => {
@@ -107,6 +116,37 @@ export default function AdminPage() {
       }
     }
     i.click()
+  }
+
+  const handleChangePassword = async () => {
+    if (newPw !== confirmPw) {
+      show('New passwords do not match', true)
+      return
+    }
+    if (newPw.length < 6) {
+      show('New password must be at least 6 characters', true)
+      return
+    }
+
+    try {
+      const res = await fetch('/api/admin/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentPassword: currentPw, newPassword: newPw }),
+      })
+
+      if (res.ok) {
+        show('Password changed successfully! Please logout and login again with the new password.')
+        setCurrentPw('')
+        setNewPw('')
+        setConfirmPw('')
+      } else {
+        const data = await res.json()
+        show(data.error || 'Failed to change password', true)
+      }
+    } catch (e) {
+      show('Change failed – check connection', true)
+    }
   }
 
   if (!auth) return (
@@ -150,6 +190,7 @@ export default function AdminPage() {
           <Tab id="beforeafter" icon={RefreshCw} label="Before & After"/>
           <Tab id="reviews" icon={MessageSquare} label="Reviews"/>
           <Tab id="messages" icon={Mail} label="Messages"/>
+          <Tab id="password" icon={Settings} label="Password"/>
         </div>
 
         {/* HOMEPAGE TAB */}
@@ -587,6 +628,55 @@ export default function AdminPage() {
               </div>
             </div>
           )}
+        </div>}
+
+        {/* PASSWORD TAB – NEW */}
+        {tab==='password'&&<div className="space-y-6">
+          <div className="bg-white rounded-2xl p-6 shadow-lg max-w-2xl mx-auto">
+            <h2 className="text-2xl font-bold mb-6">Change Admin Password</h2>
+            <div className="space-y-4">
+              <div className="relative">
+                <input
+                  type={showCurrent ? "text" : "password"}
+                  placeholder="Current Password"
+                  value={currentPw}
+                  onChange={e => setCurrentPw(e.target.value)}
+                  className="w-full px-4 py-3 border rounded-xl pr-12"
+                />
+                <button onClick={() => setShowCurrent(!showCurrent)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
+                  {showCurrent ? <EyeOff className="w-5 h-5"/> : <Eye className="w-5 h-5"/>}
+                </button>
+              </div>
+              <div className="relative">
+                <input
+                  type={showNew ? "text" : "password"}
+                  placeholder="New Password"
+                  value={newPw}
+                  onChange={e => setNewPw(e.target.value)}
+                  className="w-full px-4 py-3 border rounded-xl pr-12"
+                />
+                <button onClick={() => setShowNew(!showNew)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
+                  {showNew ? <EyeOff className="w-5 h-5"/> : <Eye className="w-5 h-5"/>}
+                </button>
+              </div>
+              <div className="relative">
+                <input
+                  type={showConfirm ? "text" : "password"}
+                  placeholder="Confirm New Password"
+                  value={confirmPw}
+                  onChange={e => setConfirmPw(e.target.value)}
+                  className="w-full px-4 py-3 border rounded-xl pr-12"
+                />
+                <button onClick={() => setShowConfirm(!showConfirm)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
+                  {showConfirm ? <EyeOff className="w-5 h-5"/> : <Eye className="w-5 h-5"/>}
+                </button>
+              </div>
+              <button onClick={handleChangePassword} className="w-full bg-green-600 text-white py-4 rounded-xl font-semibold hover:bg-green-700">
+                Save New Password
+              </button>
+            </div>
+            <p className="text-slate-600 mt-6 text-sm">After saving, please logout and login again with the new password. The old password will no longer work.</p>
+          </div>
         </div>}
       </div>
 
