@@ -45,7 +45,7 @@ export default function AdminPage() {
   const [replySubject, setReplySubject] = useState('')
   const [replyMessage, setReplyMessage] = useState('')
 
-  // Password change states
+  // ── Added for password change ──
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmNewPassword, setConfirmNewPassword] = useState('')
@@ -53,21 +53,22 @@ export default function AdminPage() {
   const [showNewPw, setShowNewPw] = useState(false)
   const [pwLoading, setPwLoading] = useState(false)
 
-  // Safe session check on load
+  // Safe session check on load (prevents crash)
   useEffect(() => {
     const checkSession = async () => {
-      try {
-        const { data: { session } } = await db.supabase.auth.getSession()
-        if (session) {
-          setAuth(true)
-          loadAll()
-        } else {
-          setLoading(false)
+      if (db && db.supabase) {
+        try {
+          const { data: { session } } = await db.supabase.auth.getSession()
+          if (session) {
+            setAuth(true)
+            loadAll()
+            return
+          }
+        } catch (e) {
+          console.error('Session check error:', e)
         }
-      } catch (e) {
-        console.error('Session check failed:', e)
-        setLoading(false)
       }
+      setLoading(false)
     }
 
     checkSession()
@@ -112,7 +113,7 @@ export default function AdminPage() {
     }
   }
 
-  // FIXED: Real Supabase login with email + password
+  // FIXED: Real Supabase login with email + password field
   const login = async () => {
     if (!email || !password) {
       setLoginError('Email and password required')
@@ -121,7 +122,7 @@ export default function AdminPage() {
 
     try {
       const { data, error } = await db.supabase.auth.signInWithPassword({
-        email: email.trim(),
+        email: email.trim().toLowerCase(),
         password
       })
 
@@ -140,7 +141,9 @@ export default function AdminPage() {
   }
 
   const logout = async () => {
-    await db.supabase.auth.signOut()
+    if (db && db.supabase) {
+      await db.supabase.auth.signOut()
+    }
     setAuth(false)
   }
 
@@ -156,7 +159,7 @@ export default function AdminPage() {
     i.click()
   }
 
-  // FIXED: Direct password change using real session (no API route)
+  // FIXED: Direct password change using real session (no API route, no RPC)
   const handleChangePassword = async () => {
     if (newPassword !== confirmNewPassword) {
       show('New passwords do not match', true)
