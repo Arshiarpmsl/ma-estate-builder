@@ -9,50 +9,36 @@ const supabase = createClient(
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end()
 
-  const { currentPassword, newPassword } = req.body
+  const { password } = req.body
+  const trimmedPassword = password?.trim() ?? ''
 
-  const trimmedCurrent = currentPassword?.trim() ?? ''
-  const trimmedNew = newPassword?.trim() ?? ''
+  if (!trimmedPassword) return res.status(400).json({ error: 'Missing password' })
 
-  if (!trimmedCurrent || !trimmedNew || trimmedNew.length < 6) {
-    return res.status(400).json({ error: 'Invalid input or password too short' })
-  }
-
-  // Get the company row (assumes single row)
+  // Get the company row
   const { data: company, error: fetchError } = await supabase
     .from('company')
-    .select('id, admin_password_hash')
+    .select('admin_password_hash')
     .single()
 
-  if (fetchError || !company) {
+  if (fetchError) {
     console.error('Fetch error:', fetchError)
-    return res.status(500).json({ error: 'Failed to load config' })
+    // Fallback to env var if DB fail
+    if (trimmedPassword === process.env.ADMIN_PASSWORD?.trim()) {
+      return res.status(200).json({ success: true })
+    }
+    return res.status(500).json({ error: 'Server error' })
   }
 
-  // Verify current password
-  let currentValid = false
-  if (company.admin_password_hash) {
-    currentValid = await bcrypt.compare(trimmedCurrent, company.admin_password_hash)
+  let valid = false
+  if (company?.admin_password_hash) {
+    valid = await bcrypt.compare(trimmedPassword, company.admin_password_hash)
   } else {
-    currentValid = trimmedCurrent === process.env.ADMIN_PASSWORD?.trim()
+    valid = trimmedPassword === process.env.ADMIN_PASSWORD?.trim()
   }
 
-  if (!currentValid) {
-    return res.status(401).json({ error: 'Current password incorrect' })
+  if (valid) {
+    return res.status(200).json({ success: true })
   }
 
-  // Save new hash
-  const newHash = await bcrypt.hash(trimmedNew, 12)
-
-  const { error: updateError } = await supabase
-    .from('company')
-    .update({ admin_password_hash: newHash })
-    .eq('id', company.id)
-
-  if (updateError) {
-    console.error('Update error:', updateError)
-    return res.status(500).json({ error: 'Failed to save new password' })
-  }
-
-  res.status(200).json({ success: true })
+  return res.status(401).json({ error: 'Invalid password' })
 }
