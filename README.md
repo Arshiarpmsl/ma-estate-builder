@@ -1,40 +1,31 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/pages/api-reference/create-next-app).
+# MA Estate Builder
 
-## Getting Started
+Website I built for a construction/renovation company (MA Estate Builder). It's got pages for services, galleries with before-after pics, reviews, and a contact form that sends auto-replies.
 
-First, run the development server:
+**Live**: https://ma-estate-builder.co.uk (Vercel + GoDaddy domain)
 
+## What It's About
+I made this to practice Next.js while doing something useful for a real trades business. Started with the basic create-next-app setup, but changed pretty much everything—layout, colors (went for clean professional look), gallery for lots of photos, and the contact replies. Tested it on my phone a lot because clients would use mobile.
+
+Used some AI for quick ideas/boilerplate, but I went through every file, tweaked it, and made sure it worked how I wanted. Added simple admin protection too (I asked client they  didn't want MFA )
+
+## Main Features
+- Home with services overview
+- Pages for about, services, gallery, reviews, before-after, contact
+- Contact form sends reply email (via Resend)
+- Basic admin to see messages (password protected)
+- Works well on phones
+
+## Tech I Used
+- Next.js (pages router)
+- React/JS
+- Supabase for any data
+- Resend for emails
+- Plain CSS (no frameworks—easier to customize)
+
+## Run It Yourself
 ```bash
+git clone https://github.com/Arshiarpmsl/ma-estate-builder.git
+cd ma-estate-builder
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `pages/index.js`. The page auto-updates as you edit the file.
-
-[API routes](https://nextjs.org/docs/pages/building-your-application/routing/api-routes) can be accessed on [http://localhost:3000/api/hello](http://localhost:3000/api/hello). This endpoint can be edited in `pages/api/hello.js`.
-
-The `pages/api` directory is mapped to `/api/*`. Files in this directory are treated as [API routes](https://nextjs.org/docs/pages/building-your-application/routing/api-routes) instead of React pages.
-
-This project uses [`next/font`](https://nextjs.org/docs/pages/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn-pages-router) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/pages/building-your-application/deploying) for more details.
