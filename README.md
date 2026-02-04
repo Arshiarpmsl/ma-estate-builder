@@ -24,6 +24,7 @@ Used some AI for quick ideas/boilerplate, but I went through every file, tweaked
 - Plain CSS (no frameworks—easier to customize)
 
 ## Run It Yourself
+You need to add .env.local
 ```bash
 git clone https://github.com/Arshiarpmsl/ma-estate-builder.git
 cd ma-estate-builder
