@@ -43,6 +43,12 @@ export default function AdminPage() {
   const [replyingTo, setReplyingTo] = useState(null)
   const [replySubject, setReplySubject] = useState('')
   const [replyMessage, setReplyMessage] = useState('')
+  
+  const [newMessageOpen, setNewMessageOpen] = useState(false)
+  const [newTo, setNewTo] = useState('')
+  const [newName, setNewName] = useState('')
+  const [newSubject, setNewSubject] = useState('')
+  const [newBody, setNewBody] = useState('')
 
   // Change Password state (for the new tab)
   const [currentPw, setCurrentPw] = useState('')
@@ -524,7 +530,15 @@ export default function AdminPage() {
 
         {/* MESSAGES TAB – with reply & delete */}
         {tab==='messages'&&<div className="bg-white rounded-2xl p-6 shadow-lg">
-          <h2 className="text-xl font-bold mb-4">Messages ({contacts.filter(c=>!c.read).length} unread)</h2>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+            <h2 className="text-xl font-bold">Messages ({contacts.filter(c=>!c.read).length} unread)</h2>
+            <button
+            onClick={() => setNewMessageOpen(true)}
+            className="bg-amber-500 hover:bg-amber-600 text-white px-6 py-3 rounded-xl font-medium flex items-center gap-2">
+            <Plus className="w-4 h-4" />
+            New Message
+            </button>
+          </div>
           {contacts.length === 0 ? <p className="text-slate-500 text-center py-8">No messages yet</p> : (
             <div className="space-y-6">
               {contacts.map(c => (
@@ -622,6 +636,90 @@ export default function AdminPage() {
                     Send Reply
                   </button>
                   <button onClick={() => setReplyingTo(null)} className="bg-slate-200 px-8 py-3 rounded-xl font-semibold">
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+                  {/* New Message Modal – completely independent */}
+          {newMessageOpen && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-2xl p-8 max-w-2xl w-full max-h-screen overflow-y-auto">
+                <h3 className="text-2xl font-bold mb-6">Compose New Message</h3>
+                <div className="space-y-4">
+                  <input
+                    type="email"
+                    placeholder="Recipient Email *"
+                    value={newTo}
+                    onChange={(e) => setNewTo(e.target.value)}
+                    className="w-full px-4 py-3 border rounded-xl"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Recipient Name (optional)"
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                    className="w-full px-4 py-3 border rounded-xl"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Subject (optional)"
+                    value={newSubject}
+                    onChange={(e) => setNewSubject(e.target.value)}
+                    className="w-full px-4 py-3 border rounded-xl"
+                  />
+                  <textarea
+                    placeholder="Message"
+                    value={newBody}
+                    onChange={(e) => setNewBody(e.target.value)}
+                    rows={10}
+                    className="w-full px-4 py-3 border rounded-xl"
+                  />
+                </div>
+                <div className="flex gap-4 justify-end mt-6">
+                  <button
+                    onClick={async () => {
+                      if (!newTo.trim()) {
+                        show('Recipient email is required', true)
+                        return
+                      }
+                      try {
+                        const res = await fetch('/api/reply-contact', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            to: newTo.trim(),
+                            subject: newSubject.trim() || 'Message from MA Estate Builder',
+                            message: newBody,
+                            name: newName.trim()
+                          }),
+                        })
+                        if (!res.ok) throw new Error()
+                        show('Message sent!')
+                        setNewMessageOpen(false)
+                        setNewTo('')
+                        setNewName('')
+                        setNewSubject('')
+                        setNewBody('')
+                      } catch (e) {
+                        show('Send failed', true)
+                      }
+                    }}
+                    className="bg-green-600 text-white px-8 py-3 rounded-xl font-semibold hover:bg-green-700"
+                  >
+                    Send Message
+                  </button>
+                  <button
+                    onClick={() => {
+                      setNewMessageOpen(false)
+                      setNewTo('')
+                      setNewName('')
+                      setNewSubject('')
+                      setNewBody('')
+                    }}
+                    className="bg-slate-200 px-8 py-3 rounded-xl font-semibold"
+                  >
                     Cancel
                   </button>
                 </div>
