@@ -2,7 +2,7 @@
 
 Website I built for a construction/renovation company (MA Estate Builder). It's got pages for services, galleries with before-after pics, reviews, and a contact form that sends auto-replies.
 
-**Live**: https://[ma-estate-builder.co.uk](https://maestatebuilder.co.uk/) (Vercel + GoDaddy domain)
+**Live**: https://[https://maestatebuilder.co.uk/](https://maestatebuil (Vercel + GoDaddy domain)
 
 ## What It's About
 I made this to practice Next.js while doing something useful for a real trades business. Started with the basic create-next-app setup, but changed pretty much everything—layout, colors (went for clean professional look), gallery for lots of photos, and the contact replies. Tested it on my phone a lot because clients would use mobile.
