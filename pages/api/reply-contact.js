@@ -1,7 +1,17 @@
-import { Resend } from 'resend';
-const resend = new Resend(process.env.RESEND_API_KEY);
+import nodemailer from 'nodemailer';
+
 const FROM_EMAIL = 'MA Estate Builder <info@maestatebuilder.co.uk>';
 const ADMIN_REPLY_EMAIL = process.env.ADMIN_EMAIL;
+
+const transporter = nodemailer.createTransport({
+  host: process.env.ZOHO_HOST,
+  port: 465,
+  secure: true,
+  auth: {
+    user: process.env.ZOHO_USER,
+    pass: process.env.ZOHO_PASS,
+  },
+});
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -13,9 +23,9 @@ export default async function handler(req, res) {
   const emailSubject = subject?.trim() || 'Message from MA Estate Builder';
 
   try {
-    await resend.emails.send({
+    await transporter.sendMail({
       from: FROM_EMAIL,
-      to: [to],
+      to: to,
       replyTo: ADMIN_REPLY_EMAIL,
       subject: emailSubject,
       text: message,
